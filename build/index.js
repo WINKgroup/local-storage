@@ -58,11 +58,11 @@ var LocalStorage = /** @class */ (function () {
             name: '',
             addToList: false
         });
+        this.consoleLog = LocalStorage.consoleLog.spawn({ id: options.name ? options.name : undefined });
         this._basePath = basePath;
         this._isAccessible = fs_1.default.existsSync(this._basePath);
         if (options.name)
             this.name = options.name;
-        this.consoleLog = LocalStorage.consoleLog.spawn({ id: options.name ? options.name : undefined });
         if (options.addToList) {
             if (!this._name)
                 throw new Error('"name" option required to be added to list');
