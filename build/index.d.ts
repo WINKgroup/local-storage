@@ -1,6 +1,6 @@
 import ConsoleLog from '@winkgroup/console-log';
 import CronManager from '@winkgroup/cron';
-import { LocalStorageDfResult, LocalStorageInputOptions } from './commons';
+import { LocalStorageDfResult, LocalStorageFile, LocalStorageInputOptions, LocalStorageLsOptions } from './commons';
 export default class LocalStorage {
     protected _basePath: string;
     protected _isAccessible: boolean;
@@ -19,9 +19,14 @@ export default class LocalStorage {
     constructor(basePath: string, inputOptions?: Partial<LocalStorageInputOptions>);
     accessibilityCheck(force?: boolean): boolean;
     df(): Promise<LocalStorageDfResult>;
-    play(filePath: string): Promise<string>;
-    ls(dir: string): string[];
+    getStats(): Promise<{
+        freeBytes: number;
+        totalBytes: number;
+        basePath: string;
+    }>;
+    play(filePath: string): Promise<void>;
+    ls(directory: string, inputOptions?: Partial<LocalStorageLsOptions>): LocalStorageFile[];
     static get list(): LocalStorage[];
     static cron(): void;
-    static getRouter(): import("express-serve-static-core").Router;
+    static getRouter(protectEndpoints?: boolean): import("express-serve-static-core").Router;
 }
