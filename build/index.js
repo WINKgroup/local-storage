@@ -184,12 +184,12 @@ var LocalStorage = /** @class */ (function () {
             returnFullPaths: false,
             noDSStore: true
         });
-        var list = fs_1.default.readdirSync(directory);
+        var list = fs_1.default.readdirSync(path_1.default.join(this._basePath, directory));
         var result = [];
         var _loop_1 = function (filename) {
             if (filename === '.DS_Store' && options.noDSStore)
                 return "continue";
-            var stat = fs_1.default.statSync(path_1.default.join(directory, filename));
+            var stat = fs_1.default.statSync(path_1.default.join(this_1._basePath, directory, filename));
             var type = '';
             if (stat.isFile())
                 type = 'file';

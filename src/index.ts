@@ -106,11 +106,11 @@ export default class LocalStorage {
             returnFullPaths: false,
             noDSStore: true
         })
-        const list = fs.readdirSync(directory)
+        const list = fs.readdirSync( path.join(this._basePath, directory) )
         let result = [] as LocalStorageFile[]
         for (const filename of list)  {
             if (filename === '.DS_Store' && options.noDSStore) continue
-            const stat = fs.statSync( path.join( directory, filename ) )
+            const stat = fs.statSync( path.join( this._basePath, directory, filename ) )
             let type = '' as LocalStorageFileType | ''
             if (stat.isFile()) type = 'file'
                 else if (stat.isDirectory()) type = 'directory'
