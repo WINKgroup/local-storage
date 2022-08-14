@@ -149,34 +149,8 @@ var LocalStorage = /** @class */ (function () {
         });
     };
     LocalStorage.prototype.play = function (filePath) {
-        return __awaiter(this, void 0, void 0, function () {
-            var fullPath, e_1;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        fullPath = path_1.default.join(this._basePath, filePath);
-                        _a.label = 1;
-                    case 1:
-                        _a.trys.push([1, 3, , 4]);
-                        return [4 /*yield*/, cmd_1.default.run(env_1.default.get('VLC_PATH', 'vlc'), {
-                                args: [fullPath],
-                                getResult: false,
-                                timeout: 0,
-                                spawnOptions: {
-                                    stdio: 'ignore'
-                                }
-                            })];
-                    case 2:
-                        _a.sent();
-                        return [3 /*break*/, 4];
-                    case 3:
-                        e_1 = _a.sent();
-                        this.consoleLog.error(e_1);
-                        return [3 /*break*/, 4];
-                    case 4: return [2 /*return*/];
-                }
-            });
-        });
+        var fullPath = path_1.default.join(this._basePath, filePath);
+        return LocalStorage.play(fullPath, this.consoleLog);
     };
     LocalStorage.prototype.ls = function (directory, inputOptions) {
         var options = lodash_1.default.defaults(inputOptions, {
@@ -229,6 +203,37 @@ var LocalStorage = /** @class */ (function () {
         enumerable: false,
         configurable: true
     });
+    LocalStorage.play = function (fullPath, consoleLog) {
+        return __awaiter(this, void 0, void 0, function () {
+            var e_1;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        if (!consoleLog)
+                            consoleLog = this.consoleLog;
+                        _a.label = 1;
+                    case 1:
+                        _a.trys.push([1, 3, , 4]);
+                        return [4 /*yield*/, cmd_1.default.run(env_1.default.get('VLC_PATH', 'vlc'), {
+                                args: [fullPath],
+                                getResult: false,
+                                timeout: 0,
+                                spawnOptions: {
+                                    stdio: 'ignore'
+                                }
+                            })];
+                    case 2:
+                        _a.sent();
+                        return [3 /*break*/, 4];
+                    case 3:
+                        e_1 = _a.sent();
+                        consoleLog.error(e_1);
+                        return [3 /*break*/, 4];
+                    case 4: return [2 /*return*/];
+                }
+            });
+        });
+    };
     LocalStorage.cron = function () {
         if (!this.cronManager.tryStartRun())
             return;

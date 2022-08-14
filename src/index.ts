@@ -84,20 +84,9 @@ export default class LocalStorage {
         }
     }
 
-    async play(filePath:string) {
+    play(filePath:string) {
         const fullPath = path.join(this._basePath, filePath)
-        try {
-            await Cmd.run(Env.get('VLC_PATH', 'vlc'), {
-                args: [fullPath],
-                getResult: false,
-                timeout: 0,
-                spawnOptions: {
-                    stdio: 'ignore'
-                }
-            })
-        } catch (e) {
-            this.consoleLog.error(e as string)
-        }
+        return LocalStorage.play(fullPath, this.consoleLog)
     }
 
     ls(directory:string, inputOptions?:Partial<LocalStorageLsOptions>) {
@@ -142,6 +131,22 @@ export default class LocalStorage {
 
     static get list() {
         return Object.values( this.listMap )
+    }
+
+    static async play(fullPath:string, consoleLog?:ConsoleLog) {
+        if (!consoleLog) consoleLog = this.consoleLog
+        try {
+            await Cmd.run(Env.get('VLC_PATH', 'vlc'), {
+                args: [fullPath],
+                getResult: false,
+                timeout: 0,
+                spawnOptions: {
+                    stdio: 'ignore'
+                }
+            })
+        } catch (e) {
+            consoleLog.error(e as string)
+        }
     }
 
     static cron() {

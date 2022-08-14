@@ -28,6 +28,7 @@ export default class LocalStorage {
     ls(directory: string, inputOptions?: Partial<LocalStorageLsOptions>): LocalStorageFile[];
     exists(filePath: string): boolean;
     static get list(): LocalStorage[];
+    static play(fullPath: string, consoleLog?: ConsoleLog): Promise<void>;
     static cron(): void;
     static getRouter(protectEndpoints?: boolean): import("express-serve-static-core").Router;
 }
