@@ -3,7 +3,7 @@ a class to manage local storages
 
 ## Install
 ```
-npm install @winkgroup/local-dir
+npm install @winkgroup/local-storage
 ```
 
 ## Usage
