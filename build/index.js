@@ -218,6 +218,10 @@ var LocalStorage = /** @class */ (function () {
         }
         return result;
     };
+    LocalStorage.prototype.exists = function (filePath) {
+        var fullPath = path_1.default.join(this._basePath, filePath);
+        return fs_1.default.existsSync(fullPath);
+    };
     Object.defineProperty(LocalStorage, "list", {
         get: function () {
             return Object.values(this.listMap);

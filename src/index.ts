@@ -135,6 +135,11 @@ export default class LocalStorage {
         return result
     }
 
+    exists(filePath:string) {
+        const fullPath = path.join(this._basePath, filePath)
+        return fs.existsSync(fullPath)
+    }
+
     static get list() {
         return Object.values( this.listMap )
     }

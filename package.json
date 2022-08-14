@@ -1,6 +1,6 @@
 {
   "name": "@winkgroup/local-storage",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "a class to manage local storages",
   "main": "./build/index.js",
   "types": "./build/index.d.ts",
