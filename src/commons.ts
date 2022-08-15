@@ -38,3 +38,9 @@ export interface LocalStorageInputOptions {
     name: string
     addToList: boolean
 }
+
+export interface StoragePath {
+    type: 'mega' | 'local'
+    name: string
+    path: string
+}

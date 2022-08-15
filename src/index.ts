@@ -12,8 +12,6 @@ import _ from 'lodash'
 import path from 'path'
 import { LocalStorageDfResult, LocalStorageFile, LocalStorageFileType, LocalStorageInputOptions, LocalStorageLsOptions } from './commons'
  
-
-
 export default class LocalStorage {
     protected _basePath:string
     protected _isAccessible = false
