@@ -27,3 +27,12 @@ export interface StoragePath {
     name: string;
     path: string;
 }
+export interface StorageHost {
+    host: string;
+    type: 'mega' | 'local';
+}
+export interface StorageFullName extends StorageHost {
+    name: string;
+}
+export interface StorageEndpoint extends StoragePath, StorageFullName {
+}
