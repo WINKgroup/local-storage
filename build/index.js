@@ -288,9 +288,13 @@ var LocalStorage = /** @class */ (function () {
                 socket.on('info request', function () { return __awaiter(_this, void 0, void 0, function () {
                     var list;
                     return __generator(this, function (_a) {
-                        list = this.getInfo();
-                        socket.emit('info', list);
-                        return [2 /*return*/];
+                        switch (_a.label) {
+                            case 0: return [4 /*yield*/, this.getInfo()];
+                            case 1:
+                                list = _a.sent();
+                                socket.emit('info', list);
+                                return [2 /*return*/];
+                        }
                     });
                 }); });
                 socket.on('play', function (localStorageName, path) { return __awaiter(_this, void 0, void 0, function () {

@@ -204,7 +204,7 @@ export default class LocalStorage {
         if (this.io) {
             this.io.on('connection', (socket) => {
                 socket.on('info request', async () => {
-                    const list = this.getInfo()
+                    const list = await this.getInfo()
                     socket.emit('info', list)
                 })
 
