@@ -1,6 +1,12 @@
 import ConsoleLog from '@winkgroup/console-log';
 import CronManager from '@winkgroup/cron';
-import { LocalStorageDfResult, LocalStorageFile, LocalStorageInputOptions, LocalStorageLsOptions } from './commons';
+import { Namespace, Server as IOServer } from 'socket.io';
+import { LocalStorageFile, LocalStorageInfo, LocalStorageInputOptions, LocalStorageLsOptions } from './commons';
+interface LocalStorageDfResult {
+    total: number;
+    used: number;
+    available: number;
+}
 export default class LocalStorage {
     protected _basePath: string;
     protected _isAccessible: boolean;
@@ -11,6 +17,7 @@ export default class LocalStorage {
     };
     static consoleLog: ConsoleLog;
     protected static cronManager: CronManager;
+    protected static io?: Namespace;
     get basePath(): string;
     set basePath(basePath: string);
     get isAccessible(): boolean;
@@ -18,18 +25,18 @@ export default class LocalStorage {
     set name(name: string);
     constructor(basePath: string, inputOptions?: Partial<LocalStorageInputOptions>);
     accessibilityCheck(force?: boolean): boolean;
-    df(): Promise<LocalStorageDfResult>;
-    getStats(): Promise<{
-        freeBytes: number;
-        totalBytes: number;
-        basePath: string;
-    }>;
-    play(filePath: string): Promise<void>;
+    protected df(): Promise<LocalStorageDfResult>;
+    protected onlyIfAccessible(functionName: string): boolean;
+    getInfo(): Promise<LocalStorageInfo>;
+    play(filePath: string): void;
     ls(directory: string, inputOptions?: Partial<LocalStorageLsOptions>): LocalStorageFile[];
     exists(filePath: string): boolean;
     fullPath(filePath: string): string;
     static get list(): LocalStorage[];
-    static play(fullPath: string, consoleLog?: ConsoleLog): Promise<void>;
+    static getInfo(): Promise<LocalStorageInfo[]>;
+    static getByName(name: string): LocalStorage | null;
+    protected static play(fullPath: string, consoleLog?: ConsoleLog): Promise<void>;
     static cron(): void;
-    static getRouter(protectEndpoints?: boolean): import("express-serve-static-core").Router;
+    static setIoServer(ioServer?: IOServer): void;
 }
+export {};

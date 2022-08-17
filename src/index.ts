@@ -1,17 +1,20 @@
 import Cmd from '@winkgroup/cmd'
 import ConsoleLog from '@winkgroup/console-log'
 import CronManager from '@winkgroup/cron'
-import { MaterialTableSearch } from "@winkgroup/db-mongo"
 import Env from '@winkgroup/env'
-import ErrorManager from "@winkgroup/error-manager"
 import diskusage from 'diskusage-ng'
-import express from "express"
-import { expressjwt as jwt } from 'express-jwt'
 import fs from 'fs'
 import _ from 'lodash'
 import path from 'path'
-import { LocalStorageDfResult, LocalStorageFile, LocalStorageFileType, LocalStorageInputOptions, LocalStorageLsOptions } from './commons'
+import { Namespace, Server as IOServer } from 'socket.io'
+import { LocalStorageFile, LocalStorageFileType, LocalStorageInfo, LocalStorageInputOptions, LocalStorageLsOptions } from './commons'
  
+interface LocalStorageDfResult {
+    total:number,
+    used: number,
+    available: number
+}
+
 export default class LocalStorage {
     protected _basePath:string
     protected _isAccessible = false
@@ -19,7 +22,8 @@ export default class LocalStorage {
     consoleLog:ConsoleLog
     static listMap = {} as { [key: string]: LocalStorage }
     static consoleLog = new ConsoleLog({ prefix: 'LocalStorage' })
-    protected static cronManager = new CronManager(10)
+    protected static cronManager = new CronManager(60)
+    protected static io?:Namespace
 
     get basePath() { return this._basePath }
     set basePath(basePath:string) {
@@ -58,13 +62,14 @@ export default class LocalStorage {
         const previousState = this._isAccessible
         this._isAccessible = fs.existsSync(this._basePath)
         if (previousState !== this._isAccessible) {
+            if (LocalStorage.io) LocalStorage.io.emit('accessibility changed', this._name, this._isAccessible)
             if (this._isAccessible) this.consoleLog.print('now accessible!')
                 else this.consoleLog.print('not accessible anymore')
         }
         return this._isAccessible
     }
 
-    df():Promise<LocalStorageDfResult> {
+    protected df():Promise<LocalStorageDfResult> {
         return new Promise( (resolve, reject) => {
             diskusage(this._basePath, (err, usage) => {
                 if (err) reject(err)
@@ -73,21 +78,39 @@ export default class LocalStorage {
         })
     }
 
-    async getStats() {
-        const usage = await this.df()
-        return {
-            freeBytes: usage.available,
-            totalBytes: usage.total,
-            basePath: this._basePath
+    protected onlyIfAccessible(functionName:string) {
+        if (this._isAccessible) return true
+        const errorMessage = `trying to run "${functionName}", but storage "${this._name}" is not accessible`
+        this.consoleLog.error(errorMessage)
+        if (LocalStorage.io) LocalStorage.io.emit('error', errorMessage)
+        return false
+    }
+
+    async getInfo() {
+        const info:LocalStorageInfo = {
+            name: this._name,
+            basePath: this._basePath,
+            isAccessible: this.accessibilityCheck()
         }
+        if (this._isAccessible) {
+            const usage = await this.df()
+            info.storage = {
+                freeBytes: usage.available,
+                totalBytes: usage.total
+            }
+        }
+
+        return info
     }
 
     play(filePath:string) {
+        if (!this.onlyIfAccessible('play')) return
         const fullPath = path.join(this._basePath, filePath)
-        return LocalStorage.play(fullPath, this.consoleLog)
+        LocalStorage.play(fullPath, this.consoleLog)
     }
 
     ls(directory:string, inputOptions?:Partial<LocalStorageLsOptions>) {
+        if (!this.onlyIfAccessible('ls')) return []
         const options:LocalStorageLsOptions = _.defaults(inputOptions, {
             recursive: false,
             returnFullPaths: false,
@@ -123,6 +146,7 @@ export default class LocalStorage {
     }
 
     exists(filePath:string) {
+        if (!this.onlyIfAccessible('exists')) return false
         const fullPath = path.join(this._basePath, filePath)
         return fs.existsSync(fullPath)
     }
@@ -135,7 +159,25 @@ export default class LocalStorage {
         return Object.values( this.listMap )
     }
 
-    static async play(fullPath:string, consoleLog?:ConsoleLog) {
+    static getInfo() {
+        return Promise.all(
+            this.list.map( ls => ls.getInfo() )
+        )
+    }
+
+    static getByName(name:string) {
+        const localStorage = this.listMap[ name ]
+        if (!localStorage) {
+            const errorMessage = `unable to find "${ name }" localStorage`
+            const consoleLog = new ConsoleLog({prefix: 'LocalStorage'})
+            consoleLog.error(errorMessage)
+            if (this.io) this.io.emit('error', errorMessage)
+            return null
+        }
+        return localStorage
+    }
+
+    protected static async play(fullPath:string, consoleLog?:ConsoleLog) {
         if (!consoleLog) consoleLog = this.consoleLog
         try {
             await Cmd.run(Env.get('VLC_PATH', 'vlc'), {
@@ -153,119 +195,25 @@ export default class LocalStorage {
 
     static cron() {
         if (!this.cronManager.tryStartRun()) return
-        this.list.map( storage => storage.isAccessible )
+        this.list.map( ls => ls.accessibilityCheck(true) )
         this.cronManager.runCompleted()
     }
 
-    static getRouter(protectEndpoints = true) {
-        const router = express.Router()
-        router.use(  express.json() )
+    static setIoServer(ioServer?:IOServer) {
+        this.io = ioServer ? ioServer.of('/local-storage') : undefined
+        if (this.io) {
+            this.io.on('connection', (socket) => {
+                socket.on('info request', async () => {
+                    const list = this.getInfo()
+                    socket.emit('info', list)
+                })
 
-        if (protectEndpoints) {
-            router.use (jwt({
-                secret: Env.get('JWT_SECRET'),
-                algorithms: ['RS256', 'HS256']
-            }))
-    
-            router.use((err:any, req:any, res:any, next:any) => {
-                if(err.name === 'UnauthorizedError') {
-                    console.error(err)
-                    res.status(err.status).send( err.message )
-                    return
-                }
-                next()
+                socket.on('play', async (localStorageName:string, path:string) => {
+                    const localStorage = this.getByName(localStorageName)
+                    if (!localStorage) return
+                    localStorage.play(path)
+                })
             })
         }
-
-        router.get('/names', async (req, res) => {
-            try {
-                const names = Object.keys(this.listMap)
-                res.json(names)
-            } catch (e) {
-                ErrorManager.sender(e, res)
-            }
-        })
-
-        router.get('/:name/df', async (req, res) => {
-            try {
-                const repo = this.listMap[req.params.name]
-                if (!repo) throw new Error(`local storage "${ req.params.name }" not found`)
-                const result = await repo.df()
-                res.json(result)
-            } catch (e) {
-                ErrorManager.sender(e, res)
-            }
-        })
-
-        router.get('/:name/stats', async (req, res) => {
-            try {
-                const repo = this.listMap[req.params.name]
-                if (!repo) throw new Error(`local storage "${ req.params.name }" not found`)
-                const result = await repo.getStats()
-                res.json(result)
-            } catch (e) {
-                ErrorManager.sender(e, res)
-            }
-        })
-
-        router.get('/:name/:pathBase64/play', async (req, res) => {
-            try {
-                const repo = this.listMap[req.params.name]
-                if (!repo) throw new Error(`local storage "${ req.params.name }" not found`)
-                const filePath = Buffer.from(req.params.pathBase64, 'base64').toString('utf8')
-                repo.play(filePath)
-                res.json()
-            } catch (e) {
-                ErrorManager.sender(e, res)
-            }
-        })
-
-        router.post('/:name/:pathBase64/materialTable', async (req, res) => {
-            try {
-                const repo = this.listMap[req.params.name]
-                if (!repo) throw new Error(`local storage "${ req.params.name }" not found`)
-                const directoryPath = Buffer.from(req.params.pathBase64, 'base64').toString('utf8')
-                let result = repo.ls(directoryPath)
-                const totalCount = result.length
-                const materialTableSearch = req.body  as MaterialTableSearch
-                
-                if (materialTableSearch.search) {
-                    const regExp = new RegExp(materialTableSearch.search, 'i')
-                    result = result.filter( file => file.name.match(regExp) )
-                }
-    
-                if (materialTableSearch.orderBy) {
-                    const field = materialTableSearch.orderBy.field
-                    const opposite = materialTableSearch.orderDirection !== 'desc' ? 1 : -1
-                    result.sort( (a:any, b:any) => a[field] < b[field] ? opposite * -1 : opposite * 1 )
-                }
-
-                const initialPos = materialTableSearch.pageSize * materialTableSearch.page
-                const finalPos = initialPos + materialTableSearch.pageSize
-                result = result.filter ( (file, pos) => ( pos >= initialPos && pos < finalPos ) )
-
-                res.json({
-                    data: result,
-                    page: materialTableSearch.page,
-                    totalCount: totalCount
-                })
-            } catch (e) {
-                ErrorManager.sender(e, res)
-            }
-        })
-
-        router.get('/:name/:pathBase64/ls', async (req, res) => {
-            try {
-                const repo = this.listMap[req.params.name]
-                if (!repo) throw new Error(`local storage "${ req.params.name }" not found`)
-                const directory = Buffer.from(req.params.pathBase64, 'base64').toString('utf8')
-                const result = repo.ls(directory)
-                res.json(result)
-            } catch (e) {
-                ErrorManager.sender(e, res)
-            }
-        })
-
-        return router
     }
 }

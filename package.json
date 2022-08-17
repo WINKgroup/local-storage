@@ -1,6 +1,6 @@
 {
   "name": "@winkgroup/local-storage",
-  "version": "1.0.8",
+  "version": "1.1.0",
   "description": "a class to manage local storages",
   "main": "./build/index.js",
   "types": "./build/index.d.ts",
@@ -33,11 +33,9 @@
     "@winkgroup/cron": "^1.0.1",
     "@winkgroup/db-mongo": "^1.1.2",
     "@winkgroup/env": "^1.4.1",
-    "@winkgroup/error-manager": "^1.0.0",
     "diskusage-ng": "^1.0.2",
-    "express": "^4.18.1",
-    "express-jwt": "^7.7.5",
-    "lodash": "^4.17.21"
+    "lodash": "^4.17.21",
+    "socket.io": "^4.5.1"
   },
   "devDependencies": {
     "@types/express": "^4.17.13",

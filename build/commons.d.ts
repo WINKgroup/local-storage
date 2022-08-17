@@ -8,15 +8,19 @@ export interface LocalStorageFile {
     updatedAt?: string;
 }
 export declare function getBytesByChildren(dir: LocalStorageFile): number | false;
+export interface LocalStorageInfo {
+    name: string;
+    basePath: string;
+    isAccessible: boolean;
+    storage?: {
+        freeBytes: number;
+        totalBytes: number;
+    };
+}
 export interface LocalStorageLsOptions {
     recursive: boolean;
     returnFullPaths: boolean;
     noDSStore: boolean;
-}
-export interface LocalStorageDfResult {
-    total: number;
-    used: number;
-    available: number;
 }
 export interface LocalStorageInputOptions {
     name: string;

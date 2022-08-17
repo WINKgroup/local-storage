@@ -54,10 +54,7 @@ var cmd_1 = __importDefault(require("@winkgroup/cmd"));
 var console_log_1 = __importDefault(require("@winkgroup/console-log"));
 var cron_1 = __importDefault(require("@winkgroup/cron"));
 var env_1 = __importDefault(require("@winkgroup/env"));
-var error_manager_1 = __importDefault(require("@winkgroup/error-manager"));
 var diskusage_ng_1 = __importDefault(require("diskusage-ng"));
-var express_1 = __importDefault(require("express"));
-var express_jwt_1 = require("express-jwt");
 var fs_1 = __importDefault(require("fs"));
 var lodash_1 = __importDefault(require("lodash"));
 var path_1 = __importDefault(require("path"));
@@ -114,6 +111,8 @@ var LocalStorage = /** @class */ (function () {
         var previousState = this._isAccessible;
         this._isAccessible = fs_1.default.existsSync(this._basePath);
         if (previousState !== this._isAccessible) {
+            if (LocalStorage.io)
+                LocalStorage.io.emit('accessibility changed', this._name, this._isAccessible);
             if (this._isAccessible)
                 this.consoleLog.print('now accessible!');
             else
@@ -131,28 +130,49 @@ var LocalStorage = /** @class */ (function () {
             });
         });
     };
-    LocalStorage.prototype.getStats = function () {
+    LocalStorage.prototype.onlyIfAccessible = function (functionName) {
+        if (this._isAccessible)
+            return true;
+        var errorMessage = "trying to run \"".concat(functionName, "\", but storage \"").concat(this._name, "\" is not accessible");
+        this.consoleLog.error(errorMessage);
+        if (LocalStorage.io)
+            LocalStorage.io.emit('error', errorMessage);
+        return false;
+    };
+    LocalStorage.prototype.getInfo = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var usage;
+            var info, usage;
             return __generator(this, function (_a) {
                 switch (_a.label) {
-                    case 0: return [4 /*yield*/, this.df()];
+                    case 0:
+                        info = {
+                            name: this._name,
+                            basePath: this._basePath,
+                            isAccessible: this.accessibilityCheck()
+                        };
+                        if (!this._isAccessible) return [3 /*break*/, 2];
+                        return [4 /*yield*/, this.df()];
                     case 1:
                         usage = _a.sent();
-                        return [2 /*return*/, {
-                                freeBytes: usage.available,
-                                totalBytes: usage.total,
-                                basePath: this._basePath
-                            }];
+                        info.storage = {
+                            freeBytes: usage.available,
+                            totalBytes: usage.total
+                        };
+                        _a.label = 2;
+                    case 2: return [2 /*return*/, info];
                 }
             });
         });
     };
     LocalStorage.prototype.play = function (filePath) {
+        if (!this.onlyIfAccessible('play'))
+            return;
         var fullPath = path_1.default.join(this._basePath, filePath);
-        return LocalStorage.play(fullPath, this.consoleLog);
+        LocalStorage.play(fullPath, this.consoleLog);
     };
     LocalStorage.prototype.ls = function (directory, inputOptions) {
+        if (!this.onlyIfAccessible('ls'))
+            return [];
         var options = lodash_1.default.defaults(inputOptions, {
             recursive: false,
             returnFullPaths: false,
@@ -193,6 +213,8 @@ var LocalStorage = /** @class */ (function () {
         return result;
     };
     LocalStorage.prototype.exists = function (filePath) {
+        if (!this.onlyIfAccessible('exists'))
+            return false;
         var fullPath = path_1.default.join(this._basePath, filePath);
         return fs_1.default.existsSync(fullPath);
     };
@@ -206,6 +228,21 @@ var LocalStorage = /** @class */ (function () {
         enumerable: false,
         configurable: true
     });
+    LocalStorage.getInfo = function () {
+        return Promise.all(this.list.map(function (ls) { return ls.getInfo(); }));
+    };
+    LocalStorage.getByName = function (name) {
+        var localStorage = this.listMap[name];
+        if (!localStorage) {
+            var errorMessage = "unable to find \"".concat(name, "\" localStorage");
+            var consoleLog = new console_log_1.default({ prefix: 'LocalStorage' });
+            consoleLog.error(errorMessage);
+            if (this.io)
+                this.io.emit('error', errorMessage);
+            return null;
+        }
+        return localStorage;
+    };
     LocalStorage.play = function (fullPath, consoleLog) {
         return __awaiter(this, void 0, void 0, function () {
             var e_1;
@@ -240,159 +277,38 @@ var LocalStorage = /** @class */ (function () {
     LocalStorage.cron = function () {
         if (!this.cronManager.tryStartRun())
             return;
-        this.list.map(function (storage) { return storage.isAccessible; });
+        this.list.map(function (ls) { return ls.accessibilityCheck(true); });
         this.cronManager.runCompleted();
     };
-    LocalStorage.getRouter = function (protectEndpoints) {
+    LocalStorage.setIoServer = function (ioServer) {
         var _this = this;
-        if (protectEndpoints === void 0) { protectEndpoints = true; }
-        var router = express_1.default.Router();
-        router.use(express_1.default.json());
-        if (protectEndpoints) {
-            router.use((0, express_jwt_1.expressjwt)({
-                secret: env_1.default.get('JWT_SECRET'),
-                algorithms: ['RS256', 'HS256']
-            }));
-            router.use(function (err, req, res, next) {
-                if (err.name === 'UnauthorizedError') {
-                    console.error(err);
-                    res.status(err.status).send(err.message);
-                    return;
-                }
-                next();
+        this.io = ioServer ? ioServer.of('/local-storage') : undefined;
+        if (this.io) {
+            this.io.on('connection', function (socket) {
+                socket.on('info request', function () { return __awaiter(_this, void 0, void 0, function () {
+                    var list;
+                    return __generator(this, function (_a) {
+                        list = this.getInfo();
+                        socket.emit('info', list);
+                        return [2 /*return*/];
+                    });
+                }); });
+                socket.on('play', function (localStorageName, path) { return __awaiter(_this, void 0, void 0, function () {
+                    var localStorage;
+                    return __generator(this, function (_a) {
+                        localStorage = this.getByName(localStorageName);
+                        if (!localStorage)
+                            return [2 /*return*/];
+                        localStorage.play(path);
+                        return [2 /*return*/];
+                    });
+                }); });
             });
         }
-        router.get('/names', function (req, res) { return __awaiter(_this, void 0, void 0, function () {
-            var names;
-            return __generator(this, function (_a) {
-                try {
-                    names = Object.keys(this.listMap);
-                    res.json(names);
-                }
-                catch (e) {
-                    error_manager_1.default.sender(e, res);
-                }
-                return [2 /*return*/];
-            });
-        }); });
-        router.get('/:name/df', function (req, res) { return __awaiter(_this, void 0, void 0, function () {
-            var repo, result, e_2;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        _a.trys.push([0, 2, , 3]);
-                        repo = this.listMap[req.params.name];
-                        if (!repo)
-                            throw new Error("local storage \"".concat(req.params.name, "\" not found"));
-                        return [4 /*yield*/, repo.df()];
-                    case 1:
-                        result = _a.sent();
-                        res.json(result);
-                        return [3 /*break*/, 3];
-                    case 2:
-                        e_2 = _a.sent();
-                        error_manager_1.default.sender(e_2, res);
-                        return [3 /*break*/, 3];
-                    case 3: return [2 /*return*/];
-                }
-            });
-        }); });
-        router.get('/:name/stats', function (req, res) { return __awaiter(_this, void 0, void 0, function () {
-            var repo, result, e_3;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        _a.trys.push([0, 2, , 3]);
-                        repo = this.listMap[req.params.name];
-                        if (!repo)
-                            throw new Error("local storage \"".concat(req.params.name, "\" not found"));
-                        return [4 /*yield*/, repo.getStats()];
-                    case 1:
-                        result = _a.sent();
-                        res.json(result);
-                        return [3 /*break*/, 3];
-                    case 2:
-                        e_3 = _a.sent();
-                        error_manager_1.default.sender(e_3, res);
-                        return [3 /*break*/, 3];
-                    case 3: return [2 /*return*/];
-                }
-            });
-        }); });
-        router.get('/:name/:pathBase64/play', function (req, res) { return __awaiter(_this, void 0, void 0, function () {
-            var repo, filePath;
-            return __generator(this, function (_a) {
-                try {
-                    repo = this.listMap[req.params.name];
-                    if (!repo)
-                        throw new Error("local storage \"".concat(req.params.name, "\" not found"));
-                    filePath = Buffer.from(req.params.pathBase64, 'base64').toString('utf8');
-                    repo.play(filePath);
-                    res.json();
-                }
-                catch (e) {
-                    error_manager_1.default.sender(e, res);
-                }
-                return [2 /*return*/];
-            });
-        }); });
-        router.post('/:name/:pathBase64/materialTable', function (req, res) { return __awaiter(_this, void 0, void 0, function () {
-            var repo, directoryPath, result, totalCount, materialTableSearch, regExp_1, field_1, opposite_1, initialPos_1, finalPos_1;
-            return __generator(this, function (_a) {
-                try {
-                    repo = this.listMap[req.params.name];
-                    if (!repo)
-                        throw new Error("local storage \"".concat(req.params.name, "\" not found"));
-                    directoryPath = Buffer.from(req.params.pathBase64, 'base64').toString('utf8');
-                    result = repo.ls(directoryPath);
-                    totalCount = result.length;
-                    materialTableSearch = req.body;
-                    if (materialTableSearch.search) {
-                        regExp_1 = new RegExp(materialTableSearch.search, 'i');
-                        result = result.filter(function (file) { return file.name.match(regExp_1); });
-                    }
-                    if (materialTableSearch.orderBy) {
-                        field_1 = materialTableSearch.orderBy.field;
-                        opposite_1 = materialTableSearch.orderDirection !== 'desc' ? 1 : -1;
-                        result.sort(function (a, b) { return a[field_1] < b[field_1] ? opposite_1 * -1 : opposite_1 * 1; });
-                    }
-                    initialPos_1 = materialTableSearch.pageSize * materialTableSearch.page;
-                    finalPos_1 = initialPos_1 + materialTableSearch.pageSize;
-                    result = result.filter(function (file, pos) { return (pos >= initialPos_1 && pos < finalPos_1); });
-                    res.json({
-                        data: result,
-                        page: materialTableSearch.page,
-                        totalCount: totalCount
-                    });
-                }
-                catch (e) {
-                    error_manager_1.default.sender(e, res);
-                }
-                return [2 /*return*/];
-            });
-        }); });
-        router.get('/:name/:pathBase64/ls', function (req, res) { return __awaiter(_this, void 0, void 0, function () {
-            var repo, directory, result;
-            return __generator(this, function (_a) {
-                try {
-                    repo = this.listMap[req.params.name];
-                    if (!repo)
-                        throw new Error("local storage \"".concat(req.params.name, "\" not found"));
-                    directory = Buffer.from(req.params.pathBase64, 'base64').toString('utf8');
-                    result = repo.ls(directory);
-                    res.json(result);
-                }
-                catch (e) {
-                    error_manager_1.default.sender(e, res);
-                }
-                return [2 /*return*/];
-            });
-        }); });
-        return router;
     };
     LocalStorage.listMap = {};
     LocalStorage.consoleLog = new console_log_1.default({ prefix: 'LocalStorage' });
-    LocalStorage.cronManager = new cron_1.default(10);
+    LocalStorage.cronManager = new cron_1.default(60);
     return LocalStorage;
 }());
 exports.default = LocalStorage;
