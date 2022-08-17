@@ -146,7 +146,6 @@ export default class LocalStorage {
     }
 
     exists(filePath:string) {
-        if (!this.onlyIfAccessible('exists')) return false
         const fullPath = path.join(this._basePath, filePath)
         return fs.existsSync(fullPath)
     }

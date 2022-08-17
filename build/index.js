@@ -213,8 +213,6 @@ var LocalStorage = /** @class */ (function () {
         return result;
     };
     LocalStorage.prototype.exists = function (filePath) {
-        if (!this.onlyIfAccessible('exists'))
-            return false;
         var fullPath = path_1.default.join(this._basePath, filePath);
         return fs_1.default.existsSync(fullPath);
     };
