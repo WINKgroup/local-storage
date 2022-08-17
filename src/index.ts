@@ -127,6 +127,10 @@ export default class LocalStorage {
         return fs.existsSync(fullPath)
     }
 
+    fullPath(filePath:string) {
+        return path.join(this._basePath, filePath)
+    }
+
     static get list() {
         return Object.values( this.listMap )
     }

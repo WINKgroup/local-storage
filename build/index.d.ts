@@ -27,6 +27,7 @@ export default class LocalStorage {
     play(filePath: string): Promise<void>;
     ls(directory: string, inputOptions?: Partial<LocalStorageLsOptions>): LocalStorageFile[];
     exists(filePath: string): boolean;
+    fullPath(filePath: string): string;
     static get list(): LocalStorage[];
     static play(fullPath: string, consoleLog?: ConsoleLog): Promise<void>;
     static cron(): void;
