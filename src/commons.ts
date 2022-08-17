@@ -56,3 +56,15 @@ export interface StorageFullName extends StorageHost{
 
 export interface StorageEndpoint extends StoragePath, StorageFullName {
 }
+
+export function strStorageEndpoint(endpoint:StorageEndpoint) {
+    return `${endpoint.name}:${endpoint.path} @ ${endpoint.host}`
+}
+
+export function strStorageFullName(fullName:StorageFullName) {
+    return `${fullName.name} @ ${fullName.host}`
+}
+
+export function strStoragePath(path:StoragePath) {
+    return `${path.name}:${path.path} (${path.type})`
+}

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getBytesByChildren = void 0;
+exports.strStoragePath = exports.strStorageFullName = exports.strStorageEndpoint = exports.getBytesByChildren = void 0;
 function getBytesByChildren(dir) {
     if (dir.type === 'file')
         return dir.bytes !== undefined ? dir.bytes : false;
@@ -17,3 +17,15 @@ function getBytesByChildren(dir) {
     return bytes;
 }
 exports.getBytesByChildren = getBytesByChildren;
+function strStorageEndpoint(endpoint) {
+    return "".concat(endpoint.name, ":").concat(endpoint.path, " @ ").concat(endpoint.host);
+}
+exports.strStorageEndpoint = strStorageEndpoint;
+function strStorageFullName(fullName) {
+    return "".concat(fullName.name, " @ ").concat(fullName.host);
+}
+exports.strStorageFullName = strStorageFullName;
+function strStoragePath(path) {
+    return "".concat(path.name, ":").concat(path.path, " (").concat(path.type, ")");
+}
+exports.strStoragePath = strStoragePath;
