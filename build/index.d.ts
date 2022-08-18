@@ -29,6 +29,7 @@ export default class LocalStorage {
     protected onlyIfAccessible(functionName: string): boolean;
     getInfo(): Promise<LocalStorageInfo>;
     play(filePath: string): void;
+    revealInFinder(directory?: string): void;
     getFile(filePath: string, inputOptions?: Partial<LocalStorageLsOptions>): StorageFile | null;
     find(filePath: string, inputOptions?: Partial<LocalStorageLsOptions>, parent?: string): StorageFile | null;
     ls(directory: string, inputOptions?: Partial<LocalStorageLsOptions>): StorageFile[];
@@ -39,6 +40,7 @@ export default class LocalStorage {
     static getByName(name: string): LocalStorage | null;
     static getFiles(filePath: string, inputOptions?: Partial<LocalStorageLsOptions>): StorageFileAndStorage[];
     protected static play(fullPath: string, consoleLog?: ConsoleLog): Promise<void>;
+    protected static revealInFinder(fullPath: string, consoleLog?: ConsoleLog): Promise<void>;
     static cron(): void;
     static setIoServer(ioServer?: IOServer): void;
 }

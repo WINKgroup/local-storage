@@ -170,6 +170,14 @@ var LocalStorage = /** @class */ (function () {
         var fullPath = path_1.default.join(this._basePath, filePath);
         LocalStorage.play(fullPath, this.consoleLog);
     };
+    // Mac only
+    LocalStorage.prototype.revealInFinder = function (directory) {
+        if (directory === void 0) { directory = ''; }
+        if (!this.onlyIfAccessible('revealInFinder'))
+            return;
+        var fullPath = path_1.default.join(this._basePath, directory);
+        LocalStorage.revealInFinder(fullPath, this.consoleLog);
+    };
     LocalStorage.prototype.getFile = function (filePath, inputOptions) {
         if (!this.onlyIfAccessible('getFile'))
             return null;
@@ -322,6 +330,37 @@ var LocalStorage = /** @class */ (function () {
             });
         });
     };
+    LocalStorage.revealInFinder = function (fullPath, consoleLog) {
+        return __awaiter(this, void 0, void 0, function () {
+            var e_2;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        if (!consoleLog)
+                            consoleLog = this.consoleLog;
+                        _a.label = 1;
+                    case 1:
+                        _a.trys.push([1, 3, , 4]);
+                        return [4 /*yield*/, cmd_1.default.run('open', {
+                                args: [fullPath],
+                                getResult: false,
+                                timeout: 0,
+                                spawnOptions: {
+                                    stdio: 'ignore'
+                                }
+                            })];
+                    case 2:
+                        _a.sent();
+                        return [3 /*break*/, 4];
+                    case 3:
+                        e_2 = _a.sent();
+                        consoleLog.error(e_2);
+                        return [3 /*break*/, 4];
+                    case 4: return [2 /*return*/];
+                }
+            });
+        });
+    };
     LocalStorage.cron = function () {
         if (!this.cronManager.tryStartRun())
             return;
@@ -352,6 +391,16 @@ var LocalStorage = /** @class */ (function () {
                         if (!localStorage)
                             return [2 /*return*/];
                         localStorage.play(path);
+                        return [2 /*return*/];
+                    });
+                }); });
+                socket.on('revealInFinder', function (localStorageName, path) { return __awaiter(_this, void 0, void 0, function () {
+                    var localStorage;
+                    return __generator(this, function (_a) {
+                        localStorage = this.getByName(localStorageName);
+                        if (!localStorage)
+                            return [2 /*return*/];
+                        localStorage.revealInFinder(path);
                         return [2 /*return*/];
                     });
                 }); });

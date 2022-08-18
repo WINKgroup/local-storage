@@ -109,6 +109,13 @@ export default class LocalStorage {
         LocalStorage.play(fullPath, this.consoleLog)
     }
 
+    // Mac only
+    revealInFinder(directory = '') {
+        if (!this.onlyIfAccessible('revealInFinder')) return
+        const fullPath = path.join(this._basePath, directory)
+        LocalStorage.revealInFinder(fullPath, this.consoleLog)
+    }
+
     getFile(filePath:string, inputOptions?:Partial<LocalStorageLsOptions>) {
         if (!this.onlyIfAccessible('getFile')) return null
         const options:LocalStorageLsOptions = _.defaults(inputOptions, {
@@ -243,6 +250,22 @@ export default class LocalStorage {
         }
     }
 
+    protected static async revealInFinder(fullPath:string, consoleLog?:ConsoleLog) {
+        if (!consoleLog) consoleLog = this.consoleLog
+        try {
+            await Cmd.run('open', {
+                args: [fullPath],
+                getResult: false,
+                timeout: 0,
+                spawnOptions: {
+                    stdio: 'ignore'
+                }
+            })
+        } catch (e) {
+            consoleLog.error(e as string)
+        }
+    }
+
     static cron() {
         if (!this.cronManager.tryStartRun()) return
         this.list.map( ls => ls.accessibilityCheck(true) )
@@ -262,6 +285,12 @@ export default class LocalStorage {
                     const localStorage = this.getByName(localStorageName)
                     if (!localStorage) return
                     localStorage.play(path)
+                })
+
+                socket.on('revealInFinder', async (localStorageName:string, path?:string) => {
+                    const localStorage = this.getByName(localStorageName)
+                    if (!localStorage) return
+                    localStorage.revealInFinder(path)
                 })
             })
         }
