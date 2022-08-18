@@ -117,7 +117,8 @@ export default class LocalStorage {
             noDSStore: true
         })
         const fullPath = path.join(this._basePath, filePath)
-        const stat = fs.statSync( fullPath )
+        const stat = fs.statSync( fullPath, { throwIfNoEntry: false} )
+        if (!stat) return null
         let type = '' as LocalStorageFileType | ''
         if (stat.isFile()) type = 'file'
             else if (stat.isDirectory()) type = 'directory'
@@ -208,6 +209,32 @@ export default class LocalStorage {
             return null
         }
         return localStorage
+    }
+
+    static getFiles(filePath:string, inputOptions?:Partial<LocalStorageLsOptions>) {
+        const result:({storageName:string, file:LocalStorageFile })[] = []
+        for (const localStorage of this.list) {
+            if (!localStorage.isAccessible) continue
+            const found = localStorage.getFile(filePath, inputOptions)
+            if (found) result.push({
+                storageName: localStorage._name,
+                file: found
+            })
+        }
+        return result
+    }
+
+    static findFile(filePath:string, inputOptions?:Partial<LocalStorageLsOptions>) {
+        const result:({storageName:string, file:LocalStorageFile })[] = []
+        for (const localStorage of this.list) {
+            if (!localStorage.isAccessible) continue
+            const found = localStorage.find(filePath, inputOptions)
+            if (found) result.push({
+                storageName: localStorage._name,
+                file: found
+            })
+        }
+        return result
     }
 
     protected static async play(fullPath:string, consoleLog?:ConsoleLog) {

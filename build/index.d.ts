@@ -37,6 +37,14 @@ export default class LocalStorage {
     static get list(): LocalStorage[];
     static getInfo(): Promise<LocalStorageInfo[]>;
     static getByName(name: string): LocalStorage | null;
+    static getFiles(filePath: string, inputOptions?: Partial<LocalStorageLsOptions>): {
+        storageName: string;
+        file: LocalStorageFile;
+    }[];
+    static findFile(filePath: string, inputOptions?: Partial<LocalStorageLsOptions>): {
+        storageName: string;
+        file: LocalStorageFile;
+    }[];
     protected static play(fullPath: string, consoleLog?: ConsoleLog): Promise<void>;
     static cron(): void;
     static setIoServer(ioServer?: IOServer): void;

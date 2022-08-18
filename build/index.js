@@ -168,7 +168,9 @@ var LocalStorage = /** @class */ (function () {
             noDSStore: true
         });
         var fullPath = path_1.default.join(this._basePath, filePath);
-        var stat = fs_1.default.statSync(fullPath);
+        var stat = fs_1.default.statSync(fullPath, { throwIfNoEntry: false });
+        if (!stat)
+            return null;
         var type = '';
         if (stat.isFile())
             type = 'file';
@@ -262,6 +264,36 @@ var LocalStorage = /** @class */ (function () {
             return null;
         }
         return localStorage;
+    };
+    LocalStorage.getFiles = function (filePath, inputOptions) {
+        var result = [];
+        for (var _i = 0, _a = this.list; _i < _a.length; _i++) {
+            var localStorage_1 = _a[_i];
+            if (!localStorage_1.isAccessible)
+                continue;
+            var found = localStorage_1.getFile(filePath, inputOptions);
+            if (found)
+                result.push({
+                    storageName: localStorage_1._name,
+                    file: found
+                });
+        }
+        return result;
+    };
+    LocalStorage.findFile = function (filePath, inputOptions) {
+        var result = [];
+        for (var _i = 0, _a = this.list; _i < _a.length; _i++) {
+            var localStorage_2 = _a[_i];
+            if (!localStorage_2.isAccessible)
+                continue;
+            var found = localStorage_2.find(filePath, inputOptions);
+            if (found)
+                result.push({
+                    storageName: localStorage_2._name,
+                    file: found
+                });
+        }
+        return result;
     };
     LocalStorage.play = function (fullPath, consoleLog) {
         return __awaiter(this, void 0, void 0, function () {
