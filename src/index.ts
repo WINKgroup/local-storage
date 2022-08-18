@@ -7,7 +7,7 @@ import fs from 'fs'
 import _ from 'lodash'
 import path from 'path'
 import { Namespace, Server as IOServer } from 'socket.io'
-import { LocalStorageFile, LocalStorageFileType, LocalStorageInfo, LocalStorageInputOptions, LocalStorageLsOptions } from './commons'
+import { LocalStorageInfo, LocalStorageInputOptions, LocalStorageLsOptions, StorageFile, StorageFileAndStorage, StorageFileType } from './commons'
  
 interface LocalStorageDfResult {
     total:number,
@@ -119,13 +119,13 @@ export default class LocalStorage {
         const fullPath = path.join(this._basePath, filePath)
         const stat = fs.statSync( fullPath, { throwIfNoEntry: false} )
         if (!stat) return null
-        let type = '' as LocalStorageFileType | ''
+        let type = '' as StorageFileType | ''
         if (stat.isFile()) type = 'file'
             else if (stat.isDirectory()) type = 'directory'
         if (!type) throw new Error(`unrecognized type for file ${filePath} in ${ this._basePath } local storage`)
         const children = (type === 'directory' && options.recursive) ? this.ls( filePath , inputOptions ) : undefined
         
-        const result:LocalStorageFile = {
+        const result:StorageFile = {
             name: options.returnFullPaths ? fullPath : filePath,
             type: type,
             bytes: stat.size,
@@ -137,7 +137,7 @@ export default class LocalStorage {
         return result
     }
 
-    find(filePath:string, inputOptions?:Partial<LocalStorageLsOptions>, parent = ''):LocalStorageFile | null {
+    find(filePath:string, inputOptions?:Partial<LocalStorageLsOptions>, parent = ''):StorageFile | null {
         if (!this.onlyIfAccessible('find')) return null
         const options:LocalStorageLsOptions = _.defaults(inputOptions, {
             recursive: false,
@@ -169,7 +169,7 @@ export default class LocalStorage {
             noDSStore: true
         })
         const list = fs.readdirSync( path.join(this._basePath, directory) )
-        let result = [] as LocalStorageFile[]
+        let result = [] as StorageFile[]
         for (const filename of list)  {
             if (filename === '.DS_Store' && options.noDSStore) continue
             const file = this.getFile( path.join( directory, filename ), inputOptions )
@@ -212,26 +212,16 @@ export default class LocalStorage {
     }
 
     static getFiles(filePath:string, inputOptions?:Partial<LocalStorageLsOptions>) {
-        const result:({storageName:string, file:LocalStorageFile })[] = []
+        const result:StorageFileAndStorage[] = []
         for (const localStorage of this.list) {
             if (!localStorage.isAccessible) continue
             const found = localStorage.getFile(filePath, inputOptions)
             if (found) result.push({
-                storageName: localStorage._name,
-                file: found
-            })
-        }
-        return result
-    }
-
-    static findFile(filePath:string, inputOptions?:Partial<LocalStorageLsOptions>) {
-        const result:({storageName:string, file:LocalStorageFile })[] = []
-        for (const localStorage of this.list) {
-            if (!localStorage.isAccessible) continue
-            const found = localStorage.find(filePath, inputOptions)
-            if (found) result.push({
-                storageName: localStorage._name,
-                file: found
+                ...found,
+                storage: {
+                    name: localStorage._name,
+                    type: 'local'
+                }
             })
         }
         return result

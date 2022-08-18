@@ -1,7 +1,7 @@
 import ConsoleLog from '@winkgroup/console-log';
 import CronManager from '@winkgroup/cron';
 import { Namespace, Server as IOServer } from 'socket.io';
-import { LocalStorageFile, LocalStorageInfo, LocalStorageInputOptions, LocalStorageLsOptions } from './commons';
+import { LocalStorageInfo, LocalStorageInputOptions, LocalStorageLsOptions, StorageFile, StorageFileAndStorage } from './commons';
 interface LocalStorageDfResult {
     total: number;
     used: number;
@@ -29,22 +29,15 @@ export default class LocalStorage {
     protected onlyIfAccessible(functionName: string): boolean;
     getInfo(): Promise<LocalStorageInfo>;
     play(filePath: string): void;
-    getFile(filePath: string, inputOptions?: Partial<LocalStorageLsOptions>): LocalStorageFile | null;
-    find(filePath: string, inputOptions?: Partial<LocalStorageLsOptions>, parent?: string): LocalStorageFile | null;
-    ls(directory: string, inputOptions?: Partial<LocalStorageLsOptions>): LocalStorageFile[];
+    getFile(filePath: string, inputOptions?: Partial<LocalStorageLsOptions>): StorageFile | null;
+    find(filePath: string, inputOptions?: Partial<LocalStorageLsOptions>, parent?: string): StorageFile | null;
+    ls(directory: string, inputOptions?: Partial<LocalStorageLsOptions>): StorageFile[];
     exists(filePath: string): boolean;
     fullPath(filePath: string): string;
     static get list(): LocalStorage[];
     static getInfo(): Promise<LocalStorageInfo[]>;
     static getByName(name: string): LocalStorage | null;
-    static getFiles(filePath: string, inputOptions?: Partial<LocalStorageLsOptions>): {
-        storageName: string;
-        file: LocalStorageFile;
-    }[];
-    static findFile(filePath: string, inputOptions?: Partial<LocalStorageLsOptions>): {
-        storageName: string;
-        file: LocalStorageFile;
-    }[];
+    static getFiles(filePath: string, inputOptions?: Partial<LocalStorageLsOptions>): StorageFileAndStorage[];
     protected static play(fullPath: string, consoleLog?: ConsoleLog): Promise<void>;
     static cron(): void;
     static setIoServer(ioServer?: IOServer): void;

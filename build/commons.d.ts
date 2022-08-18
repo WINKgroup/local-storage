@@ -1,9 +1,10 @@
-export declare type LocalStorageFileType = 'file' | 'directory';
-export interface LocalStorageFile {
+export declare type StorageFileType = 'file' | 'directory';
+export interface StorageFile {
     name: string;
-    type: LocalStorageFileType;
+    type: StorageFileType;
+    versions?: number;
     bytes?: number;
-    children?: LocalStorageFile[];
+    children?: StorageFile[];
     createdAt?: string;
     updatedAt?: string;
     transfers?: FileTransfer[];
@@ -15,7 +16,30 @@ export interface FileTransfer {
     bytes?: number;
     percentage?: number;
 }
-export declare function getBytesByChildren(dir: LocalStorageFile): number | false;
+export declare type StorageType = 'mega' | 'local';
+export interface StorageName {
+    name: string;
+    type: StorageType;
+}
+export interface StorageFullName extends StorageName {
+    host: string;
+}
+export interface StorageFilePath {
+    name: string;
+    storage: StorageName;
+}
+export interface StorageFileAndStorage extends StorageFilePath, StorageFile {
+}
+export interface StorageEndpoint {
+    name: string;
+    storage: StorageFullName;
+}
+export interface StorageEndpointFile extends StorageEndpoint, StorageFile {
+}
+export declare function strStorageEndpoint(endpoint: StorageEndpoint): string;
+export declare function strStorageFullName(fullName: StorageFullName): string;
+export declare function strStoragePath(path: StorageFilePath): string;
+export declare function getBytesByChildren(dir: StorageFile): number | false;
 export interface LocalStorageInfo {
     name: string;
     basePath: string;
@@ -34,20 +58,3 @@ export interface LocalStorageInputOptions {
     name: string;
     addToList: boolean;
 }
-export interface StoragePath {
-    type: 'mega' | 'local';
-    name: string;
-    path: string;
-}
-export interface StorageHost {
-    host: string;
-    type: 'mega' | 'local';
-}
-export interface StorageFullName extends StorageHost {
-    name: string;
-}
-export interface StorageEndpoint extends StoragePath, StorageFullName {
-}
-export declare function strStorageEndpoint(endpoint: StorageEndpoint): string;
-export declare function strStorageFullName(fullName: StorageFullName): string;
-export declare function strStoragePath(path: StoragePath): string;

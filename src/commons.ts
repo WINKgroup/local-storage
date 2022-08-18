@@ -1,10 +1,11 @@
-export type LocalStorageFileType = 'file' | 'directory'
+export type StorageFileType = 'file' | 'directory'
 
-export interface LocalStorageFile {
+export interface StorageFile {
     name: string
-    type: LocalStorageFileType
+    type: StorageFileType
+    versions?: number
     bytes?: number
-    children?: LocalStorageFile[],
+    children?: StorageFile[],
     createdAt?: string
     updatedAt?: string
     transfers?: FileTransfer[]
@@ -19,7 +20,46 @@ export interface FileTransfer {
     percentage?: number
 }
 
-export function getBytesByChildren(dir:LocalStorageFile) {
+export type StorageType = 'mega' | 'local'
+
+export interface StorageName {
+    name: string
+    type: StorageType
+}
+
+export interface StorageFullName extends StorageName {
+    host: string
+}
+
+export interface StorageFilePath {
+    name: string
+    storage: StorageName
+}
+
+export interface StorageFileAndStorage extends StorageFilePath, StorageFile {
+} 
+
+export interface StorageEndpoint {
+    name: string
+    storage: StorageFullName
+}
+
+export interface StorageEndpointFile extends StorageEndpoint, StorageFile {
+}
+
+export function strStorageEndpoint(endpoint:StorageEndpoint) {
+    return `${endpoint.storage.name}:${endpoint.name} @ ${endpoint.storage.host}`
+}
+
+export function strStorageFullName(fullName:StorageFullName) {
+    return `${fullName.name} @ ${fullName.host}`
+}
+
+export function strStoragePath(path:StorageFilePath) {
+    return `${path.storage.name}:${path.name} (${path.storage.type})`
+}
+
+export function getBytesByChildren(dir:StorageFile) {
     if (dir.type === 'file') return dir.bytes !== undefined ? dir.bytes : false
     let bytes = 0
     if (dir.children) {
@@ -31,6 +71,11 @@ export function getBytesByChildren(dir:LocalStorageFile) {
     }
     return bytes
 }
+
+
+
+
+
 
 export interface LocalStorageInfo {
     name: string
@@ -51,34 +96,4 @@ export interface LocalStorageLsOptions {
 export interface LocalStorageInputOptions {
     name: string
     addToList: boolean
-}
-
-export interface StoragePath {
-    type: 'mega' | 'local'
-    name: string
-    path: string
-}
-
-export interface StorageHost {
-    host: string
-    type: 'mega' | 'local'
-}
-
-export interface StorageFullName extends StorageHost {
-    name: string
-}
-
-export interface StorageEndpoint extends StoragePath, StorageFullName {
-}
-
-export function strStorageEndpoint(endpoint:StorageEndpoint) {
-    return `${endpoint.name}:${endpoint.path} @ ${endpoint.host}`
-}
-
-export function strStorageFullName(fullName:StorageFullName) {
-    return `${fullName.name} @ ${fullName.host}`
-}
-
-export function strStoragePath(path:StoragePath) {
-    return `${path.name}:${path.path} (${path.type})`
 }
