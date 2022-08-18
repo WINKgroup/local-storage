@@ -7,6 +7,16 @@ export interface LocalStorageFile {
     children?: LocalStorageFile[],
     createdAt?: string
     updatedAt?: string
+    transfers?: FileTransfer[]
+}
+
+export type FileTransferState = 'to do' | 'in progress' | 'done'
+
+export interface FileTransfer {
+    state: FileTransferState
+    endpoint: StorageEndpoint
+    bytes?: number
+    percentage?: number
 }
 
 export function getBytesByChildren(dir:LocalStorageFile) {
@@ -54,7 +64,7 @@ export interface StorageHost {
     type: 'mega' | 'local'
 }
 
-export interface StorageFullName extends StorageHost{
+export interface StorageFullName extends StorageHost {
     name: string
 }
 

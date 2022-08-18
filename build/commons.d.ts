@@ -6,6 +6,14 @@ export interface LocalStorageFile {
     children?: LocalStorageFile[];
     createdAt?: string;
     updatedAt?: string;
+    transfers?: FileTransfer[];
+}
+export declare type FileTransferState = 'to do' | 'in progress' | 'done';
+export interface FileTransfer {
+    state: FileTransferState;
+    endpoint: StorageEndpoint;
+    bytes?: number;
+    percentage?: number;
 }
 export declare function getBytesByChildren(dir: LocalStorageFile): number | false;
 export interface LocalStorageInfo {
