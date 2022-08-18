@@ -29,6 +29,8 @@ export default class LocalStorage {
     protected onlyIfAccessible(functionName: string): boolean;
     getInfo(): Promise<LocalStorageInfo>;
     play(filePath: string): void;
+    getFile(filePath: string, inputOptions?: Partial<LocalStorageLsOptions>): LocalStorageFile | null;
+    find(filePath: string, inputOptions?: Partial<LocalStorageLsOptions>, parent?: string): LocalStorageFile | null;
     ls(directory: string, inputOptions?: Partial<LocalStorageLsOptions>): LocalStorageFile[];
     exists(filePath: string): boolean;
     fullPath(filePath: string): string;

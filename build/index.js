@@ -1,15 +1,4 @@
 "use strict";
-var __assign = (this && this.__assign) || function () {
-    __assign = Object.assign || function(t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-            s = arguments[i];
-            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-                t[p] = s[p];
-        }
-        return t;
-    };
-    return __assign.apply(this, arguments);
-};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -170,6 +159,60 @@ var LocalStorage = /** @class */ (function () {
         var fullPath = path_1.default.join(this._basePath, filePath);
         LocalStorage.play(fullPath, this.consoleLog);
     };
+    LocalStorage.prototype.getFile = function (filePath, inputOptions) {
+        if (!this.onlyIfAccessible('getFile'))
+            return null;
+        var options = lodash_1.default.defaults(inputOptions, {
+            recursive: false,
+            returnFullPaths: false,
+            noDSStore: true
+        });
+        var fullPath = path_1.default.join(this._basePath, filePath);
+        var stat = fs_1.default.statSync(fullPath);
+        var type = '';
+        if (stat.isFile())
+            type = 'file';
+        else if (stat.isDirectory())
+            type = 'directory';
+        if (!type)
+            throw new Error("unrecognized type for file ".concat(filePath, " in ").concat(this._basePath, " local storage"));
+        var children = (type === 'directory' && options.recursive) ? this.ls(filePath, inputOptions) : undefined;
+        var result = {
+            name: options.returnFullPaths ? fullPath : filePath,
+            type: type,
+            bytes: stat.size,
+            children: children,
+            createdAt: stat.ctime.toISOString(),
+            updatedAt: stat.mtime.toISOString()
+        };
+        return result;
+    };
+    LocalStorage.prototype.find = function (filePath, inputOptions, parent) {
+        if (parent === void 0) { parent = ''; }
+        if (!this.onlyIfAccessible('find'))
+            return null;
+        var options = lodash_1.default.defaults(inputOptions, {
+            recursive: false,
+            returnFullPaths: false,
+            noDSStore: true
+        });
+        var list = fs_1.default.readdirSync(path_1.default.join(this._basePath, parent));
+        for (var _i = 0, list_1 = list; _i < list_1.length; _i++) {
+            var filename = list_1[_i];
+            var searchName = path_1.default.join(parent, filename);
+            if (searchName === filePath)
+                return this.getFile(searchName, inputOptions);
+            if (options.recursive) {
+                var stat = fs_1.default.statSync(filename);
+                if (stat.isDirectory()) {
+                    var found = this.find(filePath, inputOptions, searchName);
+                    if (found)
+                        return found;
+                }
+            }
+        }
+        return null;
+    };
     LocalStorage.prototype.ls = function (directory, inputOptions) {
         if (!this.onlyIfAccessible('ls'))
             return [];
@@ -180,35 +223,14 @@ var LocalStorage = /** @class */ (function () {
         });
         var list = fs_1.default.readdirSync(path_1.default.join(this._basePath, directory));
         var result = [];
-        var _loop_1 = function (filename) {
+        for (var _i = 0, list_2 = list; _i < list_2.length; _i++) {
+            var filename = list_2[_i];
             if (filename === '.DS_Store' && options.noDSStore)
-                return "continue";
-            var stat = fs_1.default.statSync(path_1.default.join(this_1._basePath, directory, filename));
-            var type = '';
-            if (stat.isFile())
-                type = 'file';
-            else if (stat.isDirectory())
-                type = 'directory';
-            if (!type)
-                throw new Error("unrecognized type for file ".concat(filename, " in ").concat(this_1._basePath, " local storage"));
-            if (type === 'directory' && options.recursive) {
-                var subList = this_1.ls(path_1.default.join(directory, filename), options);
-                if (!options.returnFullPaths)
-                    subList = subList.map(function (file) {
-                        return __assign(__assign({}, file), { name: path_1.default.join(filename, file.name) });
-                    });
-                result = result.concat(subList);
-            }
-            result.push({
-                name: options.returnFullPaths ? path_1.default.join(directory, filename) : filename,
-                bytes: stat.size,
-                type: type
-            });
-        };
-        var this_1 = this;
-        for (var _i = 0, list_1 = list; _i < list_1.length; _i++) {
-            var filename = list_1[_i];
-            _loop_1(filename);
+                continue;
+            var file = this.getFile(path_1.default.join(directory, filename), inputOptions);
+            if (!file)
+                return [];
+            result.push(file);
         }
         return result;
     };

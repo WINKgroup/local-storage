@@ -109,6 +109,57 @@ export default class LocalStorage {
         LocalStorage.play(fullPath, this.consoleLog)
     }
 
+    getFile(filePath:string, inputOptions?:Partial<LocalStorageLsOptions>) {
+        if (!this.onlyIfAccessible('getFile')) return null
+        const options:LocalStorageLsOptions = _.defaults(inputOptions, {
+            recursive: false,
+            returnFullPaths: false,
+            noDSStore: true
+        })
+        const fullPath = path.join(this._basePath, filePath)
+        const stat = fs.statSync( fullPath )
+        let type = '' as LocalStorageFileType | ''
+        if (stat.isFile()) type = 'file'
+            else if (stat.isDirectory()) type = 'directory'
+        if (!type) throw new Error(`unrecognized type for file ${filePath} in ${ this._basePath } local storage`)
+        const children = (type === 'directory' && options.recursive) ? this.ls( filePath , inputOptions ) : undefined
+        
+        const result:LocalStorageFile = {
+            name: options.returnFullPaths ? fullPath : filePath,
+            type: type,
+            bytes: stat.size,
+            children: children,
+            createdAt: stat.ctime.toISOString(),
+            updatedAt: stat.mtime.toISOString()
+        }
+
+        return result
+    }
+
+    find(filePath:string, inputOptions?:Partial<LocalStorageLsOptions>, parent = ''):LocalStorageFile | null {
+        if (!this.onlyIfAccessible('find')) return null
+        const options:LocalStorageLsOptions = _.defaults(inputOptions, {
+            recursive: false,
+            returnFullPaths: false,
+            noDSStore: true
+        })
+
+        const list = fs.readdirSync( path.join(this._basePath, parent) )
+        for (const filename of list)  {
+            const searchName = path.join(parent, filename)
+            if (searchName === filePath) return this.getFile( searchName, inputOptions )
+            if (options.recursive) {
+                const stat = fs.statSync( filename )
+                if (stat.isDirectory()) {
+                    const found = this.find( filePath, inputOptions, searchName )
+                    if (found) return found
+                }
+            }
+        }
+
+        return null
+    }
+
     ls(directory:string, inputOptions?:Partial<LocalStorageLsOptions>) {
         if (!this.onlyIfAccessible('ls')) return []
         const options:LocalStorageLsOptions = _.defaults(inputOptions, {
@@ -120,28 +171,11 @@ export default class LocalStorage {
         let result = [] as LocalStorageFile[]
         for (const filename of list)  {
             if (filename === '.DS_Store' && options.noDSStore) continue
-            const stat = fs.statSync( path.join( this._basePath, directory, filename ) )
-            let type = '' as LocalStorageFileType | ''
-            if (stat.isFile()) type = 'file'
-                else if (stat.isDirectory()) type = 'directory'
-            if (!type) throw new Error(`unrecognized type for file ${filename} in ${ this._basePath } local storage`)
-            if (type === 'directory' && options.recursive) {
-                let subList = this.ls( path.join(directory, filename) , options )
-                if (!options.returnFullPaths) subList = subList.map( file => {
-                    return {
-                        ...file,
-                        name: path.join( filename, file.name )
-                    }
-                } )
-                result = result.concat( subList )
-            }
-            result.push({
-                name: options.returnFullPaths ? path.join(directory, filename) : filename,
-                bytes: stat.size,
-                type: type
-            })
+            const file = this.getFile( path.join( directory, filename ), inputOptions )
+            if (!file) return []
+            result.push( file )
         }
-        
+
         return result
     }
 
