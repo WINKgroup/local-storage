@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getBytesByChildren = exports.strStoragePath = exports.strStorageFullName = exports.strStorageEndpoint = void 0;
+exports.foldStoragesByType = exports.getBytesByChildren = exports.strStoragePath = exports.strStorageFullName = exports.strStorageEndpoint = void 0;
 function strStorageEndpoint(endpoint) {
     return "".concat(endpoint.storage.name, ":").concat(endpoint.name, " @ ").concat(endpoint.storage.host);
 }
@@ -29,3 +29,15 @@ function getBytesByChildren(dir) {
     return bytes;
 }
 exports.getBytesByChildren = getBytesByChildren;
+function foldStoragesByType(list) {
+    var folded = {};
+    for (var _i = 0, list_1 = list; _i < list_1.length; _i++) {
+        var storage = list_1[_i];
+        var type = storage.storage.type;
+        if (!folded[type])
+            folded[type] = [];
+        folded[type].push(storage);
+    }
+    return folded;
+}
+exports.foldStoragesByType = foldStoragesByType;

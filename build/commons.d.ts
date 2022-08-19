@@ -46,6 +46,13 @@ export declare function strStorageEndpoint(endpoint: StorageEndpoint): string;
 export declare function strStorageFullName(fullName: StorageFullName): string;
 export declare function strStoragePath(path: StorageFilePath): string;
 export declare function getBytesByChildren(dir: StorageFile): number | false;
+export declare function foldStoragesByType<Storage extends {
+    storage: {
+        type: StorageType;
+    };
+}>(list: Storage[]): {
+    [key: string]: Storage[];
+};
 export interface LocalStorageInfo {
     name: string;
     basePath: string;

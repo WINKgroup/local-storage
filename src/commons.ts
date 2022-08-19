@@ -79,7 +79,16 @@ export function getBytesByChildren(dir:StorageFile) {
     return bytes
 }
 
+export function foldStoragesByType<Storage extends {storage: {type: StorageType}}>(list:Storage[]) {
+    const folded = {} as {[key: string]: Storage[]}
+    for(const storage of list) {
+        const type = storage.storage.type
+        if (!folded[type]) folded[type] = []
+        folded[type].push( storage )
+    }
 
+    return folded
+}
 
 
 
