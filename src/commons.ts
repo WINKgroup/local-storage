@@ -8,16 +8,6 @@ export interface StorageFile {
     children?: StorageFile[],
     createdAt?: string
     updatedAt?: string
-    transfers?: FileTransfer[]
-}
-
-export type FileTransferState = 'to do' | 'in progress' | 'done'
-
-export interface FileTransfer {
-    state: FileTransferState
-    endpoint: StorageEndpoint
-    bytes?: number
-    percentage?: number
 }
 
 export type StorageType = 'mega' | 'local'
@@ -45,6 +35,23 @@ export interface StorageEndpoint {
 }
 
 export interface StorageEndpointFile extends StorageEndpoint, StorageFile {
+}
+
+export interface StorageFileTransfer {
+    source: StorageEndpoint
+    destination: StorageEndpoint
+    bytes: number
+    totalBytes: number
+    percentage: number
+}
+
+export type FileTransferState = 'to do' | 'in progress' | 'done'
+
+export interface FileTransfer {
+    state: FileTransferState
+    endpoint: StorageEndpoint
+    bytes?: number
+    percentage?: number
 }
 
 export function strStorageEndpoint(endpoint:StorageEndpoint) {
