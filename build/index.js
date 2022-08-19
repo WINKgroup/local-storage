@@ -322,6 +322,32 @@ var LocalStorage = /** @class */ (function () {
         }
         return localStorage;
     };
+    LocalStorage.getBestName = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            var maxFreeBytes, storageName, info, _i, info_1, storageInfo, freeBytes;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        maxFreeBytes = 0;
+                        storageName = null;
+                        return [4 /*yield*/, this.getInfo()];
+                    case 1:
+                        info = _a.sent();
+                        for (_i = 0, info_1 = info; _i < info_1.length; _i++) {
+                            storageInfo = info_1[_i];
+                            if (!storageInfo.isAccessible)
+                                continue;
+                            freeBytes = storageInfo.storage.freeBytes;
+                            if (freeBytes > maxFreeBytes) {
+                                maxFreeBytes = freeBytes;
+                                storageName = storageInfo.name;
+                            }
+                        }
+                        return [2 /*return*/, storageName];
+                }
+            });
+        });
+    };
     LocalStorage.getFiles = function (filePath, inputOptions) {
         var result = [];
         for (var _i = 0, _a = this.list; _i < _a.length; _i++) {
@@ -404,6 +430,18 @@ var LocalStorage = /** @class */ (function () {
         this.io = ioServer ? ioServer.of('/local-storage') : undefined;
         if (this.io) {
             this.io.on('connection', function (socket) {
+                socket.on('best storage name request', function () { return __awaiter(_this, void 0, void 0, function () {
+                    var name;
+                    return __generator(this, function (_a) {
+                        switch (_a.label) {
+                            case 0: return [4 /*yield*/, this.getBestName()];
+                            case 1:
+                                name = _a.sent();
+                                socket.emit('best storage name', name);
+                                return [2 /*return*/];
+                        }
+                    });
+                }); });
                 socket.on('info request', function () { return __awaiter(_this, void 0, void 0, function () {
                     var list;
                     return __generator(this, function (_a) {

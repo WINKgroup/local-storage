@@ -236,6 +236,22 @@ export default class LocalStorage {
         return localStorage
     }
 
+    static async getBestName() {
+        let maxFreeBytes = 0
+        let storageName = null
+        const info = await this.getInfo()
+        for (const storageInfo of info) {
+            if (!storageInfo.isAccessible) continue
+            const freeBytes = storageInfo.storage!.freeBytes
+            if (freeBytes > maxFreeBytes) {
+                maxFreeBytes = freeBytes
+                storageName = storageInfo.name
+            }
+        }
+
+        return storageName
+    }
+
     static getFiles(filePath:string, inputOptions?:Partial<LocalStorageLsOptions>) {
         const result:StorageFileAndStorage[] = []
         for (const localStorage of this.list) {
@@ -288,6 +304,11 @@ export default class LocalStorage {
         this.io = ioServer ? ioServer.of('/local-storage') : undefined
         if (this.io) {
             this.io.on('connection', (socket) => {
+                socket.on('best storage name request', async () => {
+                    const name = await this.getBestName()
+                    socket.emit('best storage name', name)
+                })
+
                 socket.on('info request', async () => {
                     const list = await this.getInfo()
                     socket.emit('info', list)

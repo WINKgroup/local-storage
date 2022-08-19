@@ -39,6 +39,7 @@ export default class LocalStorage {
     static getInfo(): Promise<LocalStorageInfo[]>;
     static printInfo(): Promise<void>;
     static getByName(name: string): LocalStorage | null;
+    static getBestName(): Promise<string | null>;
     static getFiles(filePath: string, inputOptions?: Partial<LocalStorageLsOptions>): StorageFileAndStorage[];
     protected static play(fullPath: string, consoleLog?: ConsoleLog): Promise<void>;
     protected static revealInFinder(fullPath: string, consoleLog?: ConsoleLog): Promise<void>;
