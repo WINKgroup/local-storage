@@ -2,6 +2,7 @@ import Cmd from '@winkgroup/cmd'
 import ConsoleLog from '@winkgroup/console-log'
 import CronManager from '@winkgroup/cron'
 import Env from '@winkgroup/env'
+import { byteString } from '@winkgroup/misc'
 import diskusage from 'diskusage-ng'
 import fs from 'fs'
 import _ from 'lodash'
@@ -18,11 +19,11 @@ interface LocalStorageDfResult {
 export default class LocalStorage {
     protected _basePath:string
     protected _isAccessible = false
+    protected lastAccessibilityCheck = 0
     protected _name = ''
     consoleLog:ConsoleLog
     static listMap = {} as { [key: string]: LocalStorage }
     static consoleLog = new ConsoleLog({ prefix: 'LocalStorage' })
-    protected static cronManager = new CronManager(60)
     protected static io?:Namespace
 
     get basePath() { return this._basePath }
@@ -58,13 +59,17 @@ export default class LocalStorage {
     }
 
     accessibilityCheck(force = false) {
-        if (this._isAccessible && !force) return true
+        if (!force && this._isAccessible) {
+            const now = (new Date()).getTime()
+            if (this.lastAccessibilityCheck > now - 60 * 1000) return true
+        }
+
         const previousState = this._isAccessible
         this._isAccessible = fs.existsSync(this._basePath)
         if (previousState !== this._isAccessible) {
             if (LocalStorage.io) LocalStorage.io.emit('accessibility changed', this._name, this._isAccessible)
             if (this._isAccessible) this.consoleLog.print('now accessible!')
-                else this.consoleLog.print('not accessible anymore')
+                else this.consoleLog.warn('not accessible anymore')
         }
         return this._isAccessible
     }
@@ -90,7 +95,7 @@ export default class LocalStorage {
         const info:LocalStorageInfo = {
             name: this._name,
             basePath: this._basePath,
-            isAccessible: this.accessibilityCheck()
+            isAccessible: this.accessibilityCheck(),
         }
         if (this._isAccessible) {
             const usage = await this.df()
@@ -101,6 +106,12 @@ export default class LocalStorage {
         }
 
         return info
+    }
+
+    async getInfoStr() {
+        const info = await this.getInfo()
+        if (info.isAccessible) return `${info.name} (${ byteString(info.storage!.freeBytes) } / ${ byteString(info.storage!.totalBytes) }):  ${ info.basePath }`
+            else return `${info.name} (not accessible): ${ info.basePath }`
     }
 
     play(filePath:string) {
@@ -206,6 +217,13 @@ export default class LocalStorage {
         )
     }
 
+    static async printInfo() {
+        const consoleLog = new ConsoleLog({ prefix: 'LocalStorage' })
+        consoleLog.print('list info')
+        const list = await Promise.all( this.list.map( localStorage => localStorage.getInfoStr() ) )
+        list.map( info => console.info( info ) )
+    }
+
     static getByName(name:string) {
         const localStorage = this.listMap[ name ]
         if (!localStorage) {
@@ -264,12 +282,6 @@ export default class LocalStorage {
         } catch (e) {
             consoleLog.error(e as string)
         }
-    }
-
-    static cron() {
-        if (!this.cronManager.tryStartRun()) return
-        this.list.map( ls => ls.accessibilityCheck(true) )
-        this.cronManager.runCompleted()
     }
 
     static setIoServer(ioServer?:IOServer) {

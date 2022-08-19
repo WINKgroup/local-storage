@@ -52,8 +52,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 var cmd_1 = __importDefault(require("@winkgroup/cmd"));
 var console_log_1 = __importDefault(require("@winkgroup/console-log"));
-var cron_1 = __importDefault(require("@winkgroup/cron"));
 var env_1 = __importDefault(require("@winkgroup/env"));
+var misc_1 = require("@winkgroup/misc");
 var diskusage_ng_1 = __importDefault(require("diskusage-ng"));
 var fs_1 = __importDefault(require("fs"));
 var lodash_1 = __importDefault(require("lodash"));
@@ -61,6 +61,7 @@ var path_1 = __importDefault(require("path"));
 var LocalStorage = /** @class */ (function () {
     function LocalStorage(basePath, inputOptions) {
         this._isAccessible = false;
+        this.lastAccessibilityCheck = 0;
         this._name = '';
         var options = lodash_1.default.defaults(inputOptions, {
             name: '',
@@ -106,8 +107,11 @@ var LocalStorage = /** @class */ (function () {
     });
     LocalStorage.prototype.accessibilityCheck = function (force) {
         if (force === void 0) { force = false; }
-        if (this._isAccessible && !force)
-            return true;
+        if (!force && this._isAccessible) {
+            var now = (new Date()).getTime();
+            if (this.lastAccessibilityCheck > now - 60 * 1000)
+                return true;
+        }
         var previousState = this._isAccessible;
         this._isAccessible = fs_1.default.existsSync(this._basePath);
         if (previousState !== this._isAccessible) {
@@ -116,7 +120,7 @@ var LocalStorage = /** @class */ (function () {
             if (this._isAccessible)
                 this.consoleLog.print('now accessible!');
             else
-                this.consoleLog.print('not accessible anymore');
+                this.consoleLog.warn('not accessible anymore');
         }
         return this._isAccessible;
     };
@@ -148,7 +152,7 @@ var LocalStorage = /** @class */ (function () {
                         info = {
                             name: this._name,
                             basePath: this._basePath,
-                            isAccessible: this.accessibilityCheck()
+                            isAccessible: this.accessibilityCheck(),
                         };
                         if (!this._isAccessible) return [3 /*break*/, 2];
                         return [4 /*yield*/, this.df()];
@@ -160,6 +164,23 @@ var LocalStorage = /** @class */ (function () {
                         };
                         _a.label = 2;
                     case 2: return [2 /*return*/, info];
+                }
+            });
+        });
+    };
+    LocalStorage.prototype.getInfoStr = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            var info;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.getInfo()];
+                    case 1:
+                        info = _a.sent();
+                        if (info.isAccessible)
+                            return [2 /*return*/, "".concat(info.name, " (").concat((0, misc_1.byteString)(info.storage.freeBytes), " / ").concat((0, misc_1.byteString)(info.storage.totalBytes), "):  ").concat(info.basePath)];
+                        else
+                            return [2 /*return*/, "".concat(info.name, " (not accessible): ").concat(info.basePath)];
+                        return [2 /*return*/];
                 }
             });
         });
@@ -272,6 +293,23 @@ var LocalStorage = /** @class */ (function () {
     LocalStorage.getInfo = function () {
         return Promise.all(this.list.map(function (ls) { return ls.getInfo(); }));
     };
+    LocalStorage.printInfo = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            var consoleLog, list;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        consoleLog = new console_log_1.default({ prefix: 'LocalStorage' });
+                        consoleLog.print('list info');
+                        return [4 /*yield*/, Promise.all(this.list.map(function (localStorage) { return localStorage.getInfoStr(); }))];
+                    case 1:
+                        list = _a.sent();
+                        list.map(function (info) { return console.info(info); });
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
     LocalStorage.getByName = function (name) {
         var localStorage = this.listMap[name];
         if (!localStorage) {
@@ -361,12 +399,6 @@ var LocalStorage = /** @class */ (function () {
             });
         });
     };
-    LocalStorage.cron = function () {
-        if (!this.cronManager.tryStartRun())
-            return;
-        this.list.map(function (ls) { return ls.accessibilityCheck(true); });
-        this.cronManager.runCompleted();
-    };
     LocalStorage.setIoServer = function (ioServer) {
         var _this = this;
         this.io = ioServer ? ioServer.of('/local-storage') : undefined;
@@ -409,7 +441,6 @@ var LocalStorage = /** @class */ (function () {
     };
     LocalStorage.listMap = {};
     LocalStorage.consoleLog = new console_log_1.default({ prefix: 'LocalStorage' });
-    LocalStorage.cronManager = new cron_1.default(60);
     return LocalStorage;
 }());
 exports.default = LocalStorage;

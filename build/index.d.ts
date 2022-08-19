@@ -1,5 +1,4 @@
 import ConsoleLog from '@winkgroup/console-log';
-import CronManager from '@winkgroup/cron';
 import { Namespace, Server as IOServer } from 'socket.io';
 import { LocalStorageInfo, LocalStorageInputOptions, LocalStorageLsOptions, StorageFile, StorageFileAndStorage } from './commons';
 interface LocalStorageDfResult {
@@ -10,13 +9,13 @@ interface LocalStorageDfResult {
 export default class LocalStorage {
     protected _basePath: string;
     protected _isAccessible: boolean;
+    protected lastAccessibilityCheck: number;
     protected _name: string;
     consoleLog: ConsoleLog;
     static listMap: {
         [key: string]: LocalStorage;
     };
     static consoleLog: ConsoleLog;
-    protected static cronManager: CronManager;
     protected static io?: Namespace;
     get basePath(): string;
     set basePath(basePath: string);
@@ -28,6 +27,7 @@ export default class LocalStorage {
     protected df(): Promise<LocalStorageDfResult>;
     protected onlyIfAccessible(functionName: string): boolean;
     getInfo(): Promise<LocalStorageInfo>;
+    getInfoStr(): Promise<string>;
     play(filePath: string): void;
     revealInFinder(directory?: string): void;
     getFile(filePath: string, inputOptions?: Partial<LocalStorageLsOptions>): StorageFile | null;
@@ -37,11 +37,11 @@ export default class LocalStorage {
     fullPath(filePath: string): string;
     static get list(): LocalStorage[];
     static getInfo(): Promise<LocalStorageInfo[]>;
+    static printInfo(): Promise<void>;
     static getByName(name: string): LocalStorage | null;
     static getFiles(filePath: string, inputOptions?: Partial<LocalStorageLsOptions>): StorageFileAndStorage[];
     protected static play(fullPath: string, consoleLog?: ConsoleLog): Promise<void>;
     protected static revealInFinder(fullPath: string, consoleLog?: ConsoleLog): Promise<void>;
-    static cron(): void;
     static setIoServer(ioServer?: IOServer): void;
 }
 export {};
